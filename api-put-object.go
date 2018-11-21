@@ -34,6 +34,7 @@ import (
 // PutObjectOptions represents options specified by user for PutObject call
 type PutObjectOptions struct {
 	UserMetadata            map[string]string
+	CustomHeaders           map[string]string
 	Progress                io.Reader
 	ContentType             string
 	ContentEncoding         string
@@ -88,20 +89,16 @@ func (opts PutObjectOptions) Header() (header http.Header) {
 	if opts.WebsiteRedirectLocation != "" {
 		header[amzWebsiteRedirectLocation] = []string{opts.WebsiteRedirectLocation}
 	}
-	for k, v := range opts.UserMetadata {
-		if !isAmzHeader(k) && !isStandardHeader(k) && !isStorageClassHeader(k) {
-			header["X-Amz-Meta-"+k] = []string{v}
-		} else {
-			header[k] = []string{v}
-		}
+	for k, v := range opts.CustomHeaders {
+		header[k] = []string{v}
 	}
 	return
 }
 
 // validate() checks if the UserMetadata map has standard headers or and raises an error if so.
 func (opts PutObjectOptions) validate() (err error) {
-	for k, v := range opts.UserMetadata {
-		if !httpguts.ValidHeaderFieldName(k) || isStandardHeader(k) || isSSEHeader(k) || isStorageClassHeader(k) {
+	for k, v := range opts.CustomHeaders {
+		if !httpguts.ValidHeaderFieldName(k) {
 			return ErrInvalidArgument(k + " unsupported user defined metadata name")
 		}
 		if !httpguts.ValidHeaderFieldValue(v) {
